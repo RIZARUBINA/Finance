@@ -61,7 +61,7 @@ def portfolio_std(x, C):
     '''
     return np.sqrt(x @ C @ x)
 
-    
+
 def portfolio_var(x, C):
     ''' Volatility of specified portfolio by covariance matrix C and (x1,..,xn) '''
     return x @ C @ x
@@ -139,7 +139,8 @@ def make_opt_portfolio(R_mean, C, gamma,short_terms = False):
 def optimal_portfolios(R_mean, C, gamma_range,short_terms = False):
     '''Create optimal portfolios for different gammas'''
     opt = [ make_opt_portfolio(R_mean, C, gamma,short_terms) for gamma in gamma_range]
-    return np.array([ [portfolio_std(p.x, C), portfolio_return(p.x, R_mean)] for p in opt])
+    return (np.array([ [portfolio_std(p.x, C), portfolio_return(p.x, R_mean)] for p in opt]), 
+        np.array([p.x for p in opt]))
 
 
 def rev_sharpe_ratio(x, R_mean, Ef, C):
