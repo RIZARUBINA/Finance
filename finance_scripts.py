@@ -61,6 +61,7 @@ def portfolio_std(x, C):
     '''
     return np.sqrt(x @ C @ x)
 
+    
 def portfolio_var(x, C):
     ''' Volatility of specified portfolio by covariance matrix C and (x1,..,xn) '''
     return x @ C @ x
@@ -76,17 +77,18 @@ def portfolio_performance(x, R, C):
     return r, sigma
 
 
-def make_efficient_portfolio(R_mean, C, target, by=portfolio_std):
+def make_efficient_portfolio(R_mean, C, target, by=portfolio_std, short_terms = False):
     '''
     Find efficient on specified function portfolio. 
-    Returns solution of optimizing task
+    Returns solution of optimization task
     '''
     assets_num = len(R_mean)
     # x0 = assets_num*[1./assets_num] # init solution, diversified portfolio
     #x0 = np.array([0.5, 0.5, 0. , 0. , 0. , 0. , 0. , 0. , 0. , 0. ])
     x0 = rand_weights(assets_num)
     args = (C)
-    bounds = tuple((0.0, 1.0) for asset in range(assets_num)) # 0 <= x_i <=1 restricted short-terms
+    bound = (None, None) if short_terms else (0.0, 1.0)
+    bounds = tuple(bound for asset in range(assets_num)) # 0 <= x_i <=1 restricted short-terms
     constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1}, # constraint for sum(x) = 1
                    {'type': 'eq', 'fun': lambda x: portfolio_return(x, R_mean) - target} # constraint for return
                   )
@@ -96,7 +98,7 @@ def make_efficient_portfolio(R_mean, C, target, by=portfolio_std):
     )
     return efficient_portfolio_sol
 
-def efficient_frontier(R_mean, C, returns_range, by=portfolio_std):
+def efficient_frontier(R_mean, C, returns_range, by=portfolio_std, short_terms = False):
     '''Create efficient frontier'''
     efficients = [ make_efficient_portfolio(R_mean, C, ret) for ret in returns_range]
     return np.column_stack([
@@ -117,15 +119,16 @@ def rev_utility_function(x, R_mean, C, gamma):
     E = portfolio_return(x, R_mean)
     return gamma * sigma - E
 
-def make_opt_portfolio(R_mean, C, gamma):
+def make_opt_portfolio(R_mean, C, gamma,short_terms = False):
     '''
     Find optimal portfolio by minimizing utility function
-    Returns solution of optimizing task
+    Returns solution of optimization task
     '''
     assets_num = len(R_mean)
     x0 = rand_weights(assets_num)
     args = (R_mean, C, gamma)
-    bounds = tuple((0.0, 1.0) for asset in range(assets_num)) # 0 <= x_i <=1 restricted short-terms
+    bound = (None, None) if short_terms else (0.0, 1.0)
+    bounds = tuple(bound for asset in range(assets_num)) # 0 <= x_i <=1 restricted short-terms
     constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1}) # constraint for sum(x) = 1
     opt_portfolio_sol = minimize(rev_utility_function, x0=x0, method= 'SLSQP',
         args= args, bounds=bounds,  constraints=constraints
@@ -133,9 +136,31 @@ def make_opt_portfolio(R_mean, C, gamma):
     return opt_portfolio_sol
 
 
-def optimal_portfolios(R_mean, C, gamma_range):
+def optimal_portfolios(R_mean, C, gamma_range,short_terms = False):
     '''Create optimal portfolios for different gammas'''
-    opt = [ make_opt_portfolio(R_mean, C, gamma) for gamma in gamma_range]
+    opt = [ make_opt_portfolio(R_mean, C, gamma,short_terms) for gamma in gamma_range]
     return np.array([ [portfolio_std(p.x, C), portfolio_return(p.x, R_mean)] for p in opt])
+
+
+def rev_sharpe_ratio(x, R_mean, Ef, C):
+    E,sigma = portfolio_performance(x, R_mean, C)
+    return -(E - Ef) / sigma
+
+def make_opt_portfolio_by_sharpe_ratio(R_mean, C, Ef, short_terms = False):
+    '''
+    Find optimal portfolio by maximizing sharpe ratio.
+    Returns solution of optimization task
+    '''
+    assets_num = len(R_mean)
+    #x0 = rand_weights(assets_num)
+    x0 = assets_num*[1./assets_num] # init solution, diversified portfolio
+    args = (R_mean, Ef, C)
+    bound = (None, None) if short_terms else (0.0, 1.0)
+    bounds = tuple(bound for asset in range(assets_num)) # 0 <= x_i <=1 restricted short-terms
+    constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1}) # constraint for sum(x) = 1
+    opt_portfolio_sol = minimize(rev_sharpe_ratio, x0=x0, method= 'SLSQP',
+        args= args, bounds=bounds,  constraints=constraints
+    )
+    return opt_portfolio_sol
 
 
