@@ -163,3 +163,5 @@ def make_opt_portfolio_by_sharpe_ratio(R_mean, C, Ef, short_terms=False):
     return opt_portfolio_sol
 
 
+def VaR(E,sigma, u=1.65):
+    return -E + u*sigma
